@@ -9,7 +9,9 @@ import Icon from "./components/Icon";
 import { COLORS, WEIGHTS } from "./constants";
 import ContactForm from "./components/ContactForm";
 import { useState } from "react";
-import columns, { Contact } from "./contactColumnDefs";
+import { columns, Contact } from "./contactColumnDefs";
+// import { useLocalStorageState } from "./hooks/useLocalStorage";
+import { useLocalStorageContext } from "./context/localStorageContext";
 
 export default function Home() {
   const [showForm, setShowForm] = useState(false);
@@ -18,6 +20,15 @@ export default function Home() {
     GET_CONTACT_LIST,
     { fetchPolicy: "no-cache" }
   );
+
+  const { favoriteContacts, setFavoriteContacts } = useLocalStorageContext();
+
+  const filteredContacts = data.contact.filter(
+    (contact) =>
+      (favoriteContacts as Contact[]).findIndex((c) => c.id === contact.id) < 0
+  );
+
+  const allContacts = [...favoriteContacts, ...filteredContacts];
 
   return (
     <Wrapper className="screen-container">
@@ -34,7 +45,7 @@ export default function Home() {
             </AddButton>
           </HeadingWrapper>
           <Spacer size={24} />
-          <Table data={data.contact} columns={columns} />
+          <Table data={allContacts} columns={columns} />
         </div>
       )}
 

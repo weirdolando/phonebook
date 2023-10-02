@@ -15,6 +15,7 @@ import {
 interface Props {
   id: keyof typeof icons;
   color?: string;
+  fill?: string;
   size: string | number;
   strokeWidth?: string | number;
 }
@@ -35,6 +36,7 @@ const icons = {
 export default function Icon({
   id,
   color,
+  fill = "transparent",
   size,
   strokeWidth,
   ...delegated
@@ -45,7 +47,7 @@ export default function Icon({
 
   return (
     <Wrapper strokeWidth={strokeWidth} {...delegated}>
-      <Component color={color} size={size} />
+      <Component color={color} fill={fill} size={size} />
     </Wrapper>
   );
 }

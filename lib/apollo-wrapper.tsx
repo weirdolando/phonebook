@@ -4,20 +4,13 @@
   Use this client for Client Components
 */
 
-import {
-  ApolloClient,
-  ApolloLink,
-  HttpLink,
-  NormalizedCacheObject,
-} from "@apollo/client";
+import { ApolloClient, ApolloLink, HttpLink } from "@apollo/client";
 import {
   ApolloNextAppProvider,
   NextSSRInMemoryCache,
   SSRMultipartLink,
   NextSSRApolloClient,
 } from "@apollo/experimental-nextjs-app-support/ssr";
-
-let apolloClient: NextSSRApolloClient<NormalizedCacheObject>;
 
 function makeClient() {
   const httpLink = new HttpLink({
@@ -38,16 +31,9 @@ function makeClient() {
   });
 }
 
-export function initializeApollo() {
-  const _apolloClient = apolloClient ?? makeClient();
-  if (!apolloClient) apolloClient = _apolloClient;
-
-  return _apolloClient;
-}
-
 export function ApolloWrapper({ children }: React.PropsWithChildren) {
   return (
-    <ApolloNextAppProvider makeClient={initializeApollo}>
+    <ApolloNextAppProvider makeClient={makeClient}>
       {children}
     </ApolloNextAppProvider>
   );

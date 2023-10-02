@@ -127,7 +127,7 @@ const TableHeading = styled.th`
 `;
 
 const TableRowBody = styled.tr`
-  &:nth-child(even) {
+  &:nth-of-type(even) {
     background-color: ${COLORS.gray[50]};
   }
 

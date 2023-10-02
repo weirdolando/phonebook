@@ -1,5 +1,6 @@
+"use client";
+
 import styled from "@emotion/styled";
-import { initializeApollo } from "@/lib/apollo-wrapper";
 import {
   confirmationAlertWithArgument,
   errorAlert,
@@ -10,12 +11,17 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { COLORS } from "./constants";
 import VisuallyHidden from "./components/VisuallyHidden";
 import Icon from "./components/Icon";
+import { useState } from "react";
+import { useLocalStorageState } from "./hooks/useLocalStorage";
+import { useMutation } from "@apollo/client";
+import { useLocalStorageContext } from "./context/localStorageContext";
 
 export type Contact = {
   id: number;
   first_name: string;
   last_name: string;
   phones: { number: string }[];
+  isFavorite: boolean;
 };
 
 // Extend CSSProperties interface since I want to use custom properties
@@ -25,26 +31,8 @@ declare module "react" {
   }
 }
 
-const apolloClient = initializeApollo();
-
-async function handleDeleteContact(id: number) {
-  try {
-    await apolloClient.mutate({
-      mutation: DELETE_CONTACT,
-      variables: { id },
-    });
-
-    successAlertWithMessage("Contact deleted");
-    apolloClient.refetchQueries({
-      include: [GET_CONTACT_LIST],
-    });
-  } catch (err) {
-    errorAlert();
-  }
-}
-
 const columnHelper = createColumnHelper<Contact>();
-const columns = [
+export const columns = [
   columnHelper.accessor("first_name", {
     cell: (props) => props.getValue(),
     header: () => <span>First Name</span>,
@@ -63,17 +51,62 @@ const columns = [
     ),
     header: () => <span>Phones</span>,
   }),
-  columnHelper.accessor("id", {
+  columnHelper.display({
+    id: "actions",
     cell: (props) => {
-      const id = props.getValue();
+      const contact = props.row.original;
+      const { favoriteContacts, setFavoriteContacts } =
+        useLocalStorageContext();
+
+      const [deleteContact, { data, loading, error }] = useMutation(
+        DELETE_CONTACT,
+        {
+          onCompleted: () => {
+            successAlertWithMessage("Contact deleted");
+          },
+          refetchQueries: [GET_CONTACT_LIST],
+        }
+      );
+
+      function handleToggleFavorites(contact: Contact) {
+        if (contact.isFavorite) {
+          contact.isFavorite = false;
+          const newFavoriteContacts = favoriteContacts.filter(
+            (c) => c.id !== contact.id
+          );
+          return setFavoriteContacts(newFavoriteContacts);
+        }
+        contact.isFavorite = true;
+        setFavoriteContacts([...favoriteContacts, contact]);
+      }
+
+      async function handleDeleteContact(id: number) {
+        await deleteContact({ variables: { id } });
+        const newFavoriteContacts = favoriteContacts.filter((c) => c.id !== id);
+        setFavoriteContacts(newFavoriteContacts);
+        successAlertWithMessage("Contact deleted");
+      }
+
+      if (error) {
+        errorAlert();
+      }
+
       return (
         <IconWrapper>
           <IconButton
             style={{ "--color": COLORS.rose[400] }}
             title="Add to favorites"
+            onClick={() => handleToggleFavorites(contact)}
           >
-            <VisuallyHidden>Add contact to favorites</VisuallyHidden>
-            <Icon id="heart" size={20} />
+            <VisuallyHidden>
+              {contact.isFavorite ? "Remove" : "Add"} contact to favorites
+            </VisuallyHidden>
+            <Icon
+              id="heart"
+              size={20}
+              color={contact.isFavorite ? COLORS.rose[400] : undefined}
+              fill={contact.isFavorite ? COLORS.rose[400] : "transparent"}
+            />
           </IconButton>
           <IconButton
             style={{ "--color": COLORS.blue[600] }}
@@ -86,7 +119,7 @@ const columns = [
             style={{ "--color": COLORS.red[600] }}
             title="Delete contact"
             onClick={() => {
-              confirmationAlertWithArgument(handleDeleteContact, id);
+              confirmationAlertWithArgument(handleDeleteContact, contact.id);
             }}
           >
             <VisuallyHidden>Delete contact</VisuallyHidden>
@@ -101,6 +134,44 @@ const columns = [
       </VisuallyHidden>
     ),
   }),
+  // columnHelper.accessor("id", {
+  //   cell: (props) => {
+  //     const id = props.getValue();
+  //     return (
+  //       <IconWrapper>
+  //         <IconButton
+  //           style={{ "--color": COLORS.rose[400] }}
+  //           title="Add to favorites"
+  //         >
+  //           <VisuallyHidden>Add contact to favorites</VisuallyHidden>
+  //           <Icon id="heart" size={20} />
+  //         </IconButton>
+  //         <IconButton
+  //           style={{ "--color": COLORS.blue[600] }}
+  //           title="Edit contact"
+  //         >
+  //           <VisuallyHidden>Edit contact</VisuallyHidden>
+  //           <Icon id="edit" size={20} />
+  //         </IconButton>
+  //         <IconButton
+  //           style={{ "--color": COLORS.red[600] }}
+  //           title="Delete contact"
+  //           onClick={() => {
+  //             confirmationAlertWithArgument(handleDeleteContact, id);
+  //           }}
+  //         >
+  //           <VisuallyHidden>Delete contact</VisuallyHidden>
+  //           <Icon id="trash" size={20} />
+  //         </IconButton>
+  //       </IconWrapper>
+  //     );
+  //   },
+  //   header: () => (
+  //     <VisuallyHidden>
+  //       <span>Actions</span>
+  //     </VisuallyHidden>
+  //   ),
+  // }),
 ];
 
 const UnorderedList = styled.ul`
@@ -128,5 +199,3 @@ const IconButton = styled.button`
     transform: translateY(-2px);
   }
 `;
-
-export default columns;

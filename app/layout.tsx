@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import GlobalStyles from "./components/GlobalStyles";
 import { ApolloWrapper } from "@/lib/apollo-wrapper";
+import { LocalStorageContextProvider } from "./context/localStorageContext";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ApolloWrapper>{children}</ApolloWrapper>
+        <ApolloWrapper>
+          <LocalStorageContextProvider>{children}</LocalStorageContextProvider>
+        </ApolloWrapper>
         <GlobalStyles />
       </body>
     </html>
