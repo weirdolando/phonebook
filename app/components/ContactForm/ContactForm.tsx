@@ -36,6 +36,10 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({
+    firstNameInput: "",
+    lastNameInput: "",
+  });
 
   const [addContact, { data, loading, error }] = useMutation(
     ADD_CONTACT_WITH_PHONES,
@@ -53,8 +57,22 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
     { fetchPolicy: "no-cache" }
   );
 
+  function hasSpecialChars(str: string) {
+    return /[^a-z0-9]/.test(str);
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
+
+    const errorMessage = hasSpecialChars(value)
+      ? "Name must not contain special characters"
+      : "";
+
+    setErrors({
+      ...errors,
+      [`${name}Input`]: errorMessage,
+    });
+
     setFormData({
       ...formData,
       [name]: value,
@@ -87,7 +105,11 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const { firstName, lastName, phones } = formData;
-    if (!(firstName && lastName && phones[0])) {
+    if (
+      !(firstName && lastName && phones[0]) ||
+      errors.firstNameInput ||
+      errors.lastNameInput
+    ) {
       return;
     }
 
@@ -140,9 +162,11 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
               onChange={handleChange}
               required
             />
-            <span className="text-red-500 text-sm">
-              Name cannot contain special characters
-            </span>
+            {errors.firstNameInput && (
+              <ErrorMessage className="text-red-500 text-sm">
+                {errors.firstNameInput}
+              </ErrorMessage>
+            )}
           </InputWrapper>
 
           <InputWrapper>
@@ -155,9 +179,11 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
               onChange={handleChange}
               required
             />
-            <span className="text-red-500 text-sm">
-              Name cannot contain special characters
-            </span>
+            {errors.lastNameInput && (
+              <ErrorMessage className="text-red-500 text-sm">
+                {errors.lastNameInput}
+              </ErrorMessage>
+            )}
           </InputWrapper>
 
           {formData.phones.map((phone, idx) => (
@@ -206,7 +232,14 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
           {loading || loadingExistingContact ? (
             <LoadingButton />
           ) : (
-            <SaveButton type="submit">Save</SaveButton>
+            <SaveButton
+              disabled={
+                errors.firstNameInput || errors.lastNameInput ? true : false
+              }
+              type="submit"
+            >
+              Save
+            </SaveButton>
           )}
         </ButtonGroup>
       </ButtonWrapper>
@@ -264,6 +297,11 @@ const Input = styled.input`
   border-radius: 6px;
   border: 1px solid ${COLORS.gray[300]};
   width: 100%;
+`;
+
+const ErrorMessage = styled.span`
+  font-size: 0.875rem;
+  color: ${COLORS.red[600]};
 `;
 
 const ButtonWrapper = styled.div`
@@ -342,5 +380,10 @@ const SaveButton = styled(Button)`
 
   :hover {
     background-color: ${COLORS.green[700]};
+  }
+
+  &[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 `;
