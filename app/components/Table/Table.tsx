@@ -45,33 +45,35 @@ export default function Table<T>({ data, columns }: TableProps<T>) {
         onChange={(e) => setFilter(e.target.value)}
       />
       <Spacer size={16} />
-      <TableWrapper>
-        <TableHead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHeading key={header.id}>
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </TableHeading>
-              ))}
-            </tr>
-          ))}
-        </TableHead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRowBody key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableData key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableData>
-              ))}
-            </TableRowBody>
-          ))}
-        </tbody>
-      </TableWrapper>
+      <TableContainer>
+        <TableWrapper>
+          <TableHead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHeading key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </TableHeading>
+                ))}
+              </tr>
+            ))}
+          </TableHead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRowBody key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableData key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableData>
+                ))}
+              </TableRowBody>
+            ))}
+          </tbody>
+        </TableWrapper>
+      </TableContainer>
       <Spacer size={16} />
       <PaginationWrapper>
         <ButtonIcon onClick={() => table.setPageIndex(0)}>
@@ -103,13 +105,16 @@ export default function Table<T>({ data, columns }: TableProps<T>) {
   );
 }
 
-const TableWrapper = styled.table`
+const TableContainer = styled.div`
   --color: rgba(0, 0, 0, 0.05);
-  overflow: auto;
+  overflow-x: auto;
   box-shadow: 0 1px 4px var(--color);
   border: 1px solid var(--color);
   border-radius: 6px;
   text-align: left;
+`;
+
+const TableWrapper = styled.table`
   width: 100%;
   border-collapse: collapse;
 `;

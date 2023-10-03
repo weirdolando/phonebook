@@ -84,7 +84,9 @@ export default function GlobalStyles() {
           -moz-osx-font-smoothing: auto;
         }
 
-        #root {
+        html,
+        body {
+          height: 100%;
           /*
             Create a stacking context, without a z-index.
             This ensures that all portal content (modals and tooltips) will
@@ -93,18 +95,18 @@ export default function GlobalStyles() {
           isolation: isolate;
         }
 
-        html,
-        body,
-        #root {
-          height: 100%;
-        }
-
         /* UTILITY CLASSES */
         .screen-container {
           width: 90%;
           max-width: 1200px;
           margin-inline: auto;
         }
+
+        /* * {
+          background: #000 !important;
+          color: #0f0 !important;
+          outline: solid #f00 1px !important;
+        } */
       `}
     />
   );

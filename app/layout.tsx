@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import GlobalStyles from "./components/GlobalStyles";
 import { ApolloWrapper } from "@/lib/apollo-wrapper";
-import { LocalStorageContextProvider } from "./context/localStorageContext";
+import { LocalStorageContextProvider } from "./context/LocalStorageContext";
+import { ContactFormContextProvider } from "./context/ContactFormContext";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ApolloWrapper>
-          <LocalStorageContextProvider>{children}</LocalStorageContextProvider>
+          <LocalStorageContextProvider>
+            <ContactFormContextProvider>{children}</ContactFormContextProvider>
+          </LocalStorageContextProvider>
         </ApolloWrapper>
         <GlobalStyles />
       </body>

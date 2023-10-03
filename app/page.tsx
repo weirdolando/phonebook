@@ -10,11 +10,12 @@ import { COLORS, WEIGHTS } from "./constants";
 import ContactForm from "./components/ContactForm";
 import { useState } from "react";
 import { columns, Contact } from "./contactColumnDefs";
-// import { useLocalStorageState } from "./hooks/useLocalStorage";
-import { useLocalStorageContext } from "./context/localStorageContext";
+import { useLocalStorageContext } from "./context/LocalStorageContext";
+import { useContactFormContext } from "./context/ContactFormContext";
 
 export default function Home() {
-  const [showForm, setShowForm] = useState(false);
+  const { showForm, setShowForm, contactId, setContactId } =
+    useContactFormContext();
 
   const { data }: { data: { contact: Contact[] } } = useSuspenseQuery(
     GET_CONTACT_LIST,
@@ -30,16 +31,24 @@ export default function Home() {
 
   const allContacts = [...favoriteContacts, ...filteredContacts];
 
+  function handleAddContactClick() {
+    setContactId(0);
+    setShowForm(true);
+  }
+
   return (
     <Wrapper className="screen-container">
       <Spacer size={56} />
       {showForm ? (
-        <ContactForm action="Add" onCloseForm={() => setShowForm(false)} />
+        <ContactForm
+          onCloseForm={() => setShowForm(false)}
+          contactId={contactId}
+        />
       ) : (
         <div>
           <HeadingWrapper>
             <h1>Contacts☎️</h1>
-            <AddButton onClick={() => setShowForm(true)}>
+            <AddButton onClick={handleAddContactClick}>
               <Icon id="plus" size={16} />
               Add Contact
             </AddButton>

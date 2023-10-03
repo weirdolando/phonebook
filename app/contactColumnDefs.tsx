@@ -14,7 +14,8 @@ import Icon from "./components/Icon";
 import { useState } from "react";
 import { useLocalStorageState } from "./hooks/useLocalStorage";
 import { useMutation } from "@apollo/client";
-import { useLocalStorageContext } from "./context/localStorageContext";
+import { useLocalStorageContext } from "./context/LocalStorageContext";
+import { useContactFormContext } from "./context/ContactFormContext";
 
 export type Contact = {
   id: number;
@@ -24,7 +25,7 @@ export type Contact = {
   isFavorite: boolean;
 };
 
-// Extend CSSProperties interface since I want to use custom properties
+// Extend CSSProperties interface since I want to use CSS custom properties
 declare module "react" {
   interface CSSProperties {
     "--color"?: string;
@@ -57,6 +58,7 @@ export const columns = [
       const contact = props.row.original;
       const { favoriteContacts, setFavoriteContacts } =
         useLocalStorageContext();
+      const { setShowForm, setContactId } = useContactFormContext();
 
       const [deleteContact, { data, loading, error }] = useMutation(
         DELETE_CONTACT,
@@ -87,6 +89,11 @@ export const columns = [
         successAlertWithMessage("Contact deleted");
       }
 
+      function handleEditContact() {
+        setShowForm(true);
+        setContactId(contact.id);
+      }
+
       if (error) {
         errorAlert();
       }
@@ -111,6 +118,7 @@ export const columns = [
           <IconButton
             style={{ "--color": COLORS.blue[600] }}
             title="Edit contact"
+            onClick={handleEditContact}
           >
             <VisuallyHidden>Edit contact</VisuallyHidden>
             <Icon id="edit" size={20} />

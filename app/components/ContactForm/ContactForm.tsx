@@ -1,14 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { useLazyQuery, useMutation } from "@apollo/client";
+import {
+  UseSuspenseQueryResult,
+  skipToken,
+  useLazyQuery,
+  useMutation,
+} from "@apollo/client";
 import styled from "@emotion/styled";
+import { useSuspenseQuery } from "@apollo/experimental-nextjs-app-support/ssr";
+
 import { COLORS, WEIGHTS } from "@/app/constants";
 import {
   ADD_CONTACT_WITH_PHONES,
+  ADD_NUMBER_TO_CONTACT,
+  DELETE_NUMBER_FROM_CONTACT,
+  EDIT_CONTACT,
+  EDIT_PHONE_NUMBER,
+  GET_CONTACT_DETAIL,
   GET_CONTACT_LIST,
 } from "@/app/graphql/queries";
 import {
+  errorAlert,
   errorAlertWithMessage,
   successAlertWithMessage,
 } from "@/app/helpers/alerts";
@@ -16,23 +29,39 @@ import {
 import Icon from "../Icon";
 import Spacer from "../Spacer";
 import LoadingButton from "../LoadingButton";
+import { Contact } from "@/app/contactColumnDefs";
 
 interface Props {
-  action: string;
   onCloseForm: () => void;
+  contactId?: number;
 }
 
 interface FormData {
   firstName: string;
   lastName: string;
-  phones: string[];
+  phones: { number: string }[];
 }
 
-export default function ContactForm({ action = "Add", onCloseForm }: Props) {
+interface ContactDetail {
+  contact_by_pk: Contact;
+}
+
+export default function ContactForm({ onCloseForm, contactId }: Props) {
+  const {
+    data: dataContactDetail,
+  }: UseSuspenseQueryResult<ContactDetail | undefined, any> = useSuspenseQuery(
+    GET_CONTACT_DETAIL,
+    contactId
+      ? { variables: { id: contactId }, fetchPolicy: "no-cache" }
+      : skipToken
+  );
+
+  const contactDetail = dataContactDetail?.contact_by_pk;
+
   const initialFormData: FormData = {
-    firstName: "",
-    lastName: "",
-    phones: [""],
+    firstName: contactDetail?.first_name || "",
+    lastName: contactDetail?.last_name || "",
+    phones: contactDetail?.phones || [{ number: "" }],
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -41,24 +70,61 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
     lastNameInput: "",
   });
 
-  const [addContact, { data, loading, error }] = useMutation(
-    ADD_CONTACT_WITH_PHONES,
+  const [
+    addContact,
     {
-      onCompleted: () => {
-        onCloseForm();
-        successAlertWithMessage("Contact added");
-      },
-      refetchQueries: [GET_CONTACT_LIST],
-    }
-  );
+      data: dataAddContact,
+      loading: loadingAddContact,
+      error: errorAddContact,
+    },
+  ] = useMutation(ADD_CONTACT_WITH_PHONES, {
+    onCompleted: () => {
+      onCloseForm();
+      successAlertWithMessage("Contact added");
+    },
+    refetchQueries: [GET_CONTACT_LIST],
+  });
 
-  const [getContact, { loading: loadingExistingContact }] = useLazyQuery(
+  const [
+    updateContact,
+    {
+      data: dataUpdateContact,
+      loading: loadingUpdateContact,
+      error: errorUpdateContact,
+    },
+  ] = useMutation(EDIT_CONTACT, {
+    onCompleted: () => {
+      onCloseForm();
+      successAlertWithMessage("Contact updated");
+    },
+    refetchQueries: [GET_CONTACT_LIST],
+  });
+
+  const [
+    addNumberToContact,
+    {
+      data: dataUpdatePhone,
+      loading: loadingUpdatePhone,
+      error: errorUpdatePhone,
+    },
+  ] = useMutation(ADD_NUMBER_TO_CONTACT);
+
+  const [
+    deleteNumberFromContact,
+    {
+      data: dataDeletePhone,
+      loading: loadingDeletePhone,
+      error: errorDeletePhone,
+    },
+  ] = useMutation(DELETE_NUMBER_FROM_CONTACT);
+
+  const [getContacts, { loading: loadingExistingContact }] = useLazyQuery(
     GET_CONTACT_LIST,
     { fetchPolicy: "no-cache" }
   );
 
   function hasSpecialChars(str: string) {
-    return /[^a-z0-9]/.test(str);
+    return /[^a-z0-9\s]/i.test(str);
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -81,7 +147,7 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
 
   function handlePhoneChange(value: string, index: number) {
     const updatedPhones = [...formData.phones];
-    updatedPhones[index] = value;
+    updatedPhones[index] = { number: value };
     setFormData({
       ...formData,
       phones: updatedPhones,
@@ -91,7 +157,7 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
   function handleAddPhone() {
     setFormData({
       ...formData,
-      phones: [...formData.phones, ""],
+      phones: [...formData.phones, { number: "" }],
     });
   }
 
@@ -99,6 +165,42 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
     setFormData({
       ...formData,
       phones: formData.phones.slice(0, formData.phones.length - 1),
+    });
+  }
+
+  async function updateContactAndPhone() {
+    if (!contactDetail?.phones) {
+      return;
+    }
+
+    const deletePromises = contactDetail.phones.map((phone) => {
+      return deleteNumberFromContact({
+        variables: {
+          contact_id: contactId,
+          number: phone.number,
+        },
+      });
+    });
+
+    const addPromises = formData.phones.map((phone) => {
+      return addNumberToContact({
+        variables: {
+          contact_id: contactId,
+          phone_number: phone.number,
+        },
+      });
+    });
+
+    await Promise.all([...deletePromises, ...addPromises]);
+
+    await updateContact({
+      variables: {
+        id: contactId,
+        _set: {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+        },
+      },
     });
   }
 
@@ -110,16 +212,19 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
       errors.firstNameInput ||
       errors.lastNameInput
     ) {
-      return;
+      return errorAlertWithMessage("Required fields cannot be empty");
     }
 
     /*
       I store it inside a variable, since using the `data` variable
       from `useLazyQuery` returns undefined at first
     */
-    const existingContact = await getContact({
+    const existingContact = await getContacts({
       variables: {
         where: {
+          id: {
+            _neq: contactId,
+          },
           first_name: {
             _like: firstName,
           },
@@ -134,23 +239,30 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
       return errorAlertWithMessage("Contact with that name already exists");
     }
 
-    const phonesObj = phones.map((phone) => ({ number: phone }));
-
-    addContact({
-      variables: {
-        first_name: firstName,
-        last_name: lastName,
-        phones: phonesObj,
-      },
-    });
-
-    setFormData(initialFormData);
+    if (contactId) {
+      await updateContactAndPhone();
+    } else {
+      await addContact({
+        variables: {
+          first_name: firstName,
+          last_name: lastName,
+          phones: phones,
+        },
+      });
+    }
   }
+
+  const isLoading =
+    loadingAddContact ||
+    loadingExistingContact ||
+    loadingUpdateContact ||
+    loadingUpdatePhone ||
+    loadingDeletePhone;
 
   return (
     <Form onSubmit={handleSubmit}>
       <div>
-        <Title>{action} Contact</Title>
+        <Title>{contactId ? "Edit" : "Add"} Contact</Title>
         <GridWrapper>
           <InputWrapper>
             <RequiredLabel htmlFor="firstName">First Name</RequiredLabel>
@@ -198,7 +310,7 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
               <Input
                 type="text"
                 id={`phone-${idx}`}
-                value={phone}
+                value={phone.number}
                 onChange={(e) => handlePhoneChange(e.target.value, idx)}
                 required={idx === 0}
               />
@@ -229,7 +341,7 @@ export default function ContactForm({ action = "Add", onCloseForm }: Props) {
           <CancelButton type="button" onClick={onCloseForm}>
             Cancel
           </CancelButton>
-          {loading || loadingExistingContact ? (
+          {isLoading ? (
             <LoadingButton />
           ) : (
             <SaveButton
