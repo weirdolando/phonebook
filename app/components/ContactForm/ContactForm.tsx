@@ -61,10 +61,14 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
   const initialFormData: FormData = {
     firstName: contactDetail?.first_name || "",
     lastName: contactDetail?.last_name || "",
-    phones: contactDetail?.phones || [{ number: "" }],
+    phones:
+      contactDetail?.phones && contactDetail.phones.length
+        ? contactDetail.phones
+        : [{ number: "" }],
   };
 
   const [formData, setFormData] = useState(initialFormData);
+
   const [errors, setErrors] = useState({
     firstNameInput: "",
     lastNameInput: "",
@@ -182,6 +186,8 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
       });
     });
 
+    await Promise.all([...deletePromises]);
+
     const addPromises = formData.phones.map((phone) => {
       return addNumberToContact({
         variables: {
@@ -191,7 +197,7 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
       });
     });
 
-    await Promise.all([...deletePromises, ...addPromises]);
+    await Promise.all([...addPromises]);
 
     await updateContact({
       variables: {
@@ -261,6 +267,7 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
 
   return (
     <Form onSubmit={handleSubmit}>
+      <Spacer size={56} />
       <div>
         <Title>{contactId ? "Edit" : "Add"} Contact</Title>
         <GridWrapper>
@@ -275,9 +282,7 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
               required
             />
             {errors.firstNameInput && (
-              <ErrorMessage className="text-red-500 text-sm">
-                {errors.firstNameInput}
-              </ErrorMessage>
+              <ErrorMessage>{errors.firstNameInput}</ErrorMessage>
             )}
           </InputWrapper>
 
@@ -292,9 +297,7 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
               required
             />
             {errors.lastNameInput && (
-              <ErrorMessage className="text-red-500 text-sm">
-                {errors.lastNameInput}
-              </ErrorMessage>
+              <ErrorMessage>{errors.lastNameInput}</ErrorMessage>
             )}
           </InputWrapper>
 
@@ -308,10 +311,11 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
                 <Label htmlFor={`phone-${idx}`}>Phone {idx + 1}</Label>
               )}
               <Input
-                type="text"
+                type="tel"
                 id={`phone-${idx}`}
                 value={phone.number}
                 onChange={(e) => handlePhoneChange(e.target.value, idx)}
+                pattern="/\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}/g"
                 required={idx === 0}
               />
             </InputWrapper>
@@ -355,12 +359,12 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
           )}
         </ButtonGroup>
       </ButtonWrapper>
+      <Spacer size={12} />
     </Form>
   );
 }
 
 const Form = styled.form`
-  min-height: 100%;
   display: flex;
   flex-direction: column;
 `;
@@ -454,7 +458,7 @@ const PhoneButton = styled.button`
 const AddPhoneButton = styled(PhoneButton)`
   background-color: ${COLORS.green[600]};
 
-  :hover {
+  &:hover {
     background-color: ${COLORS.green[700]};
   }
 `;
@@ -462,7 +466,7 @@ const AddPhoneButton = styled(PhoneButton)`
 const DeletePhoneButton = styled(PhoneButton)`
   background-color: ${COLORS.red[600]};
 
-  :hover {
+  &:hover {
     background-color: ${COLORS.red[700]};
   }
 `;
@@ -481,7 +485,7 @@ const Button = styled.button`
 const CancelButton = styled(Button)`
   background-color: #fff;
 
-  :hover {
+  &:hover {
     background-color: #f9fafb;
   }
 `;
@@ -490,7 +494,7 @@ const SaveButton = styled(Button)`
   background-color: ${COLORS.green[600]};
   color: #fff;
 
-  :hover {
+  &:hover {
     background-color: ${COLORS.green[700]};
   }
 

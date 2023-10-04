@@ -1,70 +1,79 @@
 "use client";
 
-import { GET_CONTACT_LIST, DELETE_CONTACT } from "./graphql/queries";
-import Table from "./components/Table";
-import { useSuspenseQuery } from "@apollo/experimental-nextjs-app-support/ssr";
+import { debounce } from "lodash";
 import Spacer from "./components/Spacer";
 import styled from "@emotion/styled";
 import Icon from "./components/Icon";
 import { COLORS, WEIGHTS } from "./constants";
 import ContactForm from "./components/ContactForm";
-import { useState } from "react";
-import { columns, Contact } from "./contactColumnDefs";
-import { useLocalStorageContext } from "./context/LocalStorageContext";
+import { useState, Suspense } from "react";
 import { useContactFormContext } from "./context/ContactFormContext";
+import SearchInput from "./components/SearchInput";
+import ContactTable from "./ContactTable";
+import Spinner from "./components/Spinner";
 
 export default function Home() {
+  const [filter, setFilter] = useState("");
+
   const { showForm, setShowForm, contactId, setContactId } =
     useContactFormContext();
-
-  const { data }: { data: { contact: Contact[] } } = useSuspenseQuery(
-    GET_CONTACT_LIST,
-    { fetchPolicy: "no-cache" }
-  );
-
-  const { favoriteContacts, setFavoriteContacts } = useLocalStorageContext();
-
-  const filteredContacts = data.contact.filter(
-    (contact) =>
-      (favoriteContacts as Contact[]).findIndex((c) => c.id === contact.id) < 0
-  );
-
-  const allContacts = [...favoriteContacts, ...filteredContacts];
 
   function handleAddContactClick() {
     setContactId(0);
     setShowForm(true);
   }
 
+  const debouncedHandleChange = debounce(
+    (e: React.ChangeEvent<HTMLInputElement>) => setFilter(e.target.value),
+    500
+  );
+
   return (
     <Wrapper className="screen-container">
-      <Spacer size={56} />
-      {showForm ? (
-        <ContactForm
-          onCloseForm={() => setShowForm(false)}
-          contactId={contactId}
-        />
-      ) : (
-        <div>
-          <HeadingWrapper>
-            <h1>Contacts☎️</h1>
-            <AddButton onClick={handleAddContactClick}>
-              <Icon id="plus" size={16} />
-              Add Contact
-            </AddButton>
-          </HeadingWrapper>
-          <Spacer size={24} />
-          <Table data={allContacts} columns={columns} />
-        </div>
-      )}
-
-      <Spacer size={16} />
+      <main>
+        {showForm ? (
+          <ContactForm
+            onCloseForm={() => setShowForm(false)}
+            contactId={contactId}
+          />
+        ) : (
+          <div>
+            <Spacer size={56} />
+            <HeadingWrapper>
+              <h1>Contacts☎️</h1>
+              <AddButton onClick={handleAddContactClick}>
+                <Icon id="plus" size={16} />
+                Add Contact
+              </AddButton>
+            </HeadingWrapper>
+            <Spacer size={24} />
+            <SearchInput
+              placeholder="John Doe"
+              onChange={debouncedHandleChange}
+            />
+            <Suspense
+              fallback={
+                <LoadingWrapper>
+                  <Spinner />
+                </LoadingWrapper>
+              }
+            >
+              <ContactTable filter={filter} />
+            </Suspense>
+          </div>
+        )}
+      </main>
+      <Spacer size={24} />
+      <Footer>© GoTo 2023 — Lindhu Parang Kusuma</Footer>
+      <Spacer size={4} />
     </Wrapper>
   );
 }
 
-const Wrapper = styled.main`
+const Wrapper = styled.div`
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 `;
 
 const HeadingWrapper = styled.div`
@@ -94,4 +103,18 @@ const AddButton = styled.button`
   &:hover {
     background-color: ${COLORS.green[700]};
   }
+`;
+
+const LoadingWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+`;
+
+const Footer = styled.footer`
+  font-size: 0.875rem;
+  color: ${COLORS.gray[900]};
+  text-align: center;
+  margin-top: auto;
 `;

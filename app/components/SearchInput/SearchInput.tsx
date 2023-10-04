@@ -5,13 +5,11 @@ import VisuallyHidden from "../VisuallyHidden";
 
 interface Props {
   placeholder?: string;
-  value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export default function SearchInput({
   placeholder = "",
-  value,
   onChange,
   ...delegated
 }: Props) {
@@ -22,12 +20,7 @@ export default function SearchInput({
       </VisuallyHidden>
       <SearchInputContainer>
         <SearchIcon id="search" size={16} />
-        <Input
-          type="text"
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-        />
+        <Input type="text" placeholder={placeholder} onChange={onChange} />
       </SearchInputContainer>
     </InputWrapper>
   );
