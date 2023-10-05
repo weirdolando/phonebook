@@ -54,7 +54,7 @@ async function confirmationAlertWithArgument<TArg>(
     text: "You won't be able to revert this!",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonColor: COLORS.green[600],
+    confirmButtonColor: COLORS.green[500],
     cancelButtonColor: COLORS.red[600],
     confirmButtonText: "Yes",
   });

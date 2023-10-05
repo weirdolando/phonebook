@@ -11,19 +11,10 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { COLORS } from "./constants";
 import VisuallyHidden from "./components/VisuallyHidden";
 import Icon from "./components/Icon";
-import { useState } from "react";
-import { useLocalStorageState } from "./hooks/useLocalStorage";
 import { useMutation } from "@apollo/client";
 import { useLocalStorageContext } from "./context/LocalStorageContext";
 import { useContactFormContext } from "./context/ContactFormContext";
-
-export type Contact = {
-  id: number;
-  first_name: string;
-  last_name: string;
-  phones: { number: string }[];
-  isFavorite: boolean;
-};
+import type { Contact } from "./types";
 
 // Extend CSSProperties interface since I want to use CSS custom properties
 declare module "react" {
@@ -142,44 +133,6 @@ export const columns = [
       </VisuallyHidden>
     ),
   }),
-  // columnHelper.accessor("id", {
-  //   cell: (props) => {
-  //     const id = props.getValue();
-  //     return (
-  //       <IconWrapper>
-  //         <IconButton
-  //           style={{ "--color": COLORS.rose[400] }}
-  //           title="Add to favorites"
-  //         >
-  //           <VisuallyHidden>Add contact to favorites</VisuallyHidden>
-  //           <Icon id="heart" size={20} />
-  //         </IconButton>
-  //         <IconButton
-  //           style={{ "--color": COLORS.blue[600] }}
-  //           title="Edit contact"
-  //         >
-  //           <VisuallyHidden>Edit contact</VisuallyHidden>
-  //           <Icon id="edit" size={20} />
-  //         </IconButton>
-  //         <IconButton
-  //           style={{ "--color": COLORS.red[600] }}
-  //           title="Delete contact"
-  //           onClick={() => {
-  //             confirmationAlertWithArgument(handleDeleteContact, id);
-  //           }}
-  //         >
-  //           <VisuallyHidden>Delete contact</VisuallyHidden>
-  //           <Icon id="trash" size={20} />
-  //         </IconButton>
-  //       </IconWrapper>
-  //     );
-  //   },
-  //   header: () => (
-  //     <VisuallyHidden>
-  //       <span>Actions</span>
-  //     </VisuallyHidden>
-  //   ),
-  // }),
 ];
 
 const UnorderedList = styled.ul`

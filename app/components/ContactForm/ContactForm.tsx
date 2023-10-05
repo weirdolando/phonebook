@@ -1,14 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  UseSuspenseQueryResult,
-  skipToken,
-  useLazyQuery,
-  useMutation,
-} from "@apollo/client";
+import { useLazyQuery, useMutation } from "@apollo/client";
 import styled from "@emotion/styled";
-import { useSuspenseQuery } from "@apollo/experimental-nextjs-app-support/ssr";
 
 import { COLORS, WEIGHTS } from "@/app/constants";
 import {
@@ -16,12 +10,9 @@ import {
   ADD_NUMBER_TO_CONTACT,
   DELETE_NUMBER_FROM_CONTACT,
   EDIT_CONTACT,
-  EDIT_PHONE_NUMBER,
-  GET_CONTACT_DETAIL,
   GET_CONTACT_LIST,
 } from "@/app/graphql/queries";
 import {
-  errorAlert,
   errorAlertWithMessage,
   successAlertWithMessage,
 } from "@/app/helpers/alerts";
@@ -29,7 +20,8 @@ import {
 import Icon from "../Icon";
 import Spacer from "../Spacer";
 import LoadingButton from "../LoadingButton";
-import { Contact } from "@/app/contactColumnDefs";
+import useContactDetail from "@/app/graphql/hooks/useContactDetail";
+import VisuallyHidden from "../VisuallyHidden";
 
 interface Props {
   onCloseForm: () => void;
@@ -42,20 +34,10 @@ interface FormData {
   phones: { number: string }[];
 }
 
-interface ContactDetail {
-  contact_by_pk: Contact;
-}
-
 export default function ContactForm({ onCloseForm, contactId }: Props) {
-  const {
-    data: dataContactDetail,
-  }: UseSuspenseQueryResult<ContactDetail | undefined, any> = useSuspenseQuery(
-    GET_CONTACT_DETAIL,
-    contactId
-      ? { variables: { id: contactId }, fetchPolicy: "no-cache" }
-      : skipToken
-  );
+  const [isLoading, setIsLoading] = useState(false);
 
+  const { data: dataContactDetail } = useContactDetail(contactId);
   const contactDetail = dataContactDetail?.contact_by_pk;
 
   const initialFormData: FormData = {
@@ -127,14 +109,10 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
     { fetchPolicy: "no-cache" }
   );
 
-  function hasSpecialChars(str: string) {
-    return /[^a-z0-9\s]/i.test(str);
-  }
-
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
 
-    const errorMessage = hasSpecialChars(value)
+    const errorMessage = /[^a-z0-9\s]/i.test(value)
       ? "Name must not contain special characters"
       : "";
 
@@ -165,10 +143,10 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
     });
   }
 
-  function handleDeletePhone() {
+  function handleDeletePhone(index: number) {
     setFormData({
       ...formData,
-      phones: formData.phones.slice(0, formData.phones.length - 1),
+      phones: formData.phones.filter((_, idx) => idx !== index),
     });
   }
 
@@ -212,6 +190,7 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setIsLoading(true);
     const { firstName, lastName, phones } = formData;
     if (
       !(firstName && lastName && phones[0]) ||
@@ -232,10 +211,10 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
             _neq: contactId,
           },
           first_name: {
-            _like: firstName,
+            _eq: firstName,
           },
           last_name: {
-            _like: lastName,
+            _eq: lastName,
           },
         },
       },
@@ -256,14 +235,9 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
         },
       });
     }
-  }
 
-  const isLoading =
-    loadingAddContact ||
-    loadingExistingContact ||
-    loadingUpdateContact ||
-    loadingUpdatePhone ||
-    loadingDeletePhone;
+    setIsLoading(false);
+  }
 
   return (
     <Form onSubmit={handleSubmit}>
@@ -274,6 +248,7 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
           <InputWrapper>
             <RequiredLabel htmlFor="firstName">First Name</RequiredLabel>
             <Input
+              data-testid="first-name"
               type="text"
               name="firstName"
               id="firstName"
@@ -289,6 +264,7 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
           <InputWrapper>
             <RequiredLabel htmlFor="lastName">Last Name</RequiredLabel>
             <Input
+              data-testid="last-name"
               type="text"
               name="lastName"
               id="lastName"
@@ -311,35 +287,38 @@ export default function ContactForm({ onCloseForm, contactId }: Props) {
                 <Label htmlFor={`phone-${idx}`}>Phone {idx + 1}</Label>
               )}
               <Input
+                data-testid={`phone-${idx}`}
                 type="tel"
                 id={`phone-${idx}`}
                 value={phone.number}
                 onChange={(e) => handlePhoneChange(e.target.value, idx)}
-                pattern="/\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}/g"
                 required={idx === 0}
               />
+              {idx > 0 && (
+                <DeletePhoneButton
+                  type="button"
+                  onClick={() => handleDeletePhone(idx)}
+                >
+                  <Icon id="minus" size={12} />
+                  <VisuallyHidden>delete phone</VisuallyHidden>
+                </DeletePhoneButton>
+              )}
             </InputWrapper>
           ))}
-          <PhoneButtonWrapper>
-            <PhoneButtonGroup>
-              <AddPhoneButton type="button" onClick={handleAddPhone}>
-                <Icon id="plus" size={12} />
-              </AddPhoneButton>
-              <span>add phone</span>
-            </PhoneButtonGroup>
-            {formData.phones.length > 1 && (
-              <PhoneButtonGroup>
-                <DeletePhoneButton type="button" onClick={handleDeletePhone}>
-                  <Icon id="minus" size={12} />
-                </DeletePhoneButton>
-                <span>delete last phone</span>
-              </PhoneButtonGroup>
-            )}
-          </PhoneButtonWrapper>
+          <PhoneButtonGroup>
+            <AddPhoneButton
+              type="button"
+              onClick={handleAddPhone}
+              data-testid="add-phone-button"
+            >
+              <Icon id="plus" size={12} />
+            </AddPhoneButton>
+            <span>add phone</span>
+          </PhoneButtonGroup>
         </GridWrapper>
       </div>
-      <Spacer size={24} />
 
+      <Spacer size={24} />
       <ButtonWrapper>
         <ButtonGroup>
           <CancelButton type="button" onClick={onCloseForm}>
@@ -403,13 +382,14 @@ const RequiredLabel = styled(Label)`
 
 const InputWrapper = styled.div`
   grid-column: 1 / span 2;
+  position: relative;
+  max-width: 90%;
 `;
 
 const Input = styled.input`
   display: block;
   padding: 8px 16px;
   margin-top: 4px;
-  flex: 1 1 0;
   border-radius: 6px;
   border: 1px solid ${COLORS.gray[300]};
   width: 100%;
@@ -432,20 +412,15 @@ const ButtonGroup = styled.div`
   gap: 8px;
 `;
 
-const PhoneButtonWrapper = styled.div`
-  grid-column: 1 / span 2;
-  display: flex;
-  gap: 12px;
-`;
-
 const PhoneButtonGroup = styled.div`
+  grid-column: 1 / span 2;
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 0.875rem;
 `;
 
 const PhoneButton = styled.button`
+  font-size: 0.875rem;
   border-radius: 50%;
   border: none;
   color: #fff;
@@ -465,6 +440,9 @@ const AddPhoneButton = styled(PhoneButton)`
 
 const DeletePhoneButton = styled(PhoneButton)`
   background-color: ${COLORS.red[600]};
+  position: absolute;
+  left: calc(100% + 5px);
+  top: 50%;
 
   &:hover {
     background-color: ${COLORS.red[700]};
@@ -477,7 +455,7 @@ const Button = styled.button`
   border: 1px solid ${COLORS.gray[300]};
   font-size: 0.875rem;
   font-weight: ${WEIGHTS.medium};
-  box-shadow: 0 1px 2px 0 red(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 200ms ease;
   cursor: pointer;
 `;

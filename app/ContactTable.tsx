@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Table from "./components/Table";
 import { useQuery } from "@apollo/client";
-import { columns, Contact } from "./contactColumnDefs";
+import { columns } from "./contactColumnDefs";
 import styled from "@emotion/styled";
 import { GET_CONTACT_LIST, GET_CONTACT_LIST_COUNT } from "./graphql/queries";
 import { useMemo } from "react";
@@ -12,6 +12,8 @@ import { useSuspenseQuery } from "@apollo/experimental-nextjs-app-support/ssr";
 import { useLocalStorageContext } from "./context/LocalStorageContext";
 import NotFound from "./components/NotFound";
 import Spacer from "./components/Spacer";
+
+import type { Contact } from "./types";
 
 const PAGINATION_LIMIT = 10;
 
@@ -42,6 +44,7 @@ export default function ContactTable({ filter }: { filter: string }) {
     }),
     [pageIndex, pageSize, contactListCount]
   );
+
   const pageCount =
     contactListCount > 0 ? Math.ceil(contactListCount / pageSize) : 1;
 
