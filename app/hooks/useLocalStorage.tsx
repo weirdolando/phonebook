@@ -7,10 +7,14 @@ function useLocalStorageState<T>(
   defaultValue: T,
   { serialize = JSON.stringify, deserialize = JSON.parse } = {}
 ) {
+  const isClient = typeof window !== "undefined";
+
   const [state, setState] = useState(() => {
-    const valueInLocalStorage = window.localStorage.getItem(key);
-    if (valueInLocalStorage) {
-      return deserialize(valueInLocalStorage);
+    if (isClient) {
+      const valueInLocalStorage = window.localStorage.getItem(key);
+      if (valueInLocalStorage) {
+        return deserialize(valueInLocalStorage);
+      }
     }
     return typeof defaultValue === "function" ? defaultValue() : defaultValue;
   });
@@ -20,10 +24,15 @@ function useLocalStorageState<T>(
   useEffect(() => {
     const prevKey = prevKeyRef.current;
     if (prevKey !== key) {
-      window.localStorage.removeItem(prevKey);
+      if (isClient) {
+        window.localStorage.removeItem(prevKey);
+      }
     }
     prevKeyRef.current = key;
-    window.localStorage.setItem(key, serialize(state));
+
+    if (isClient) {
+      window.localStorage.setItem(key, serialize(state));
+    }
   }, [key, state, serialize]);
 
   return [state, setState];

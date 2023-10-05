@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 import { useLocalStorageState } from "../hooks/useLocalStorage";
-import { Contact } from "../contactColumnDefs";
+import type { Contact } from "../types";
 
 type LocalStorageContextType = {
   favoriteContacts: Contact[];

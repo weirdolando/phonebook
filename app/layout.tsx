@@ -4,6 +4,7 @@ import GlobalStyles from "./components/GlobalStyles";
 import { ApolloWrapper } from "@/lib/apollo-wrapper";
 import { LocalStorageContextProvider } from "./context/LocalStorageContext";
 import { ContactFormContextProvider } from "./context/ContactFormContext";
+import EmotionRootStyleRegistry from "./emotion-root-style-registry";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -20,12 +21,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ApolloWrapper>
-          <LocalStorageContextProvider>
-            <ContactFormContextProvider>{children}</ContactFormContextProvider>
-          </LocalStorageContextProvider>
-        </ApolloWrapper>
-        <GlobalStyles />
+        <EmotionRootStyleRegistry>
+          <ApolloWrapper>
+            <LocalStorageContextProvider>
+              <ContactFormContextProvider>
+                {children}
+                <GlobalStyles />
+              </ContactFormContextProvider>
+            </LocalStorageContextProvider>
+          </ApolloWrapper>
+        </EmotionRootStyleRegistry>
       </body>
     </html>
   );
